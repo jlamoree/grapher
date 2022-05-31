@@ -1,0 +1,20 @@
+[Unit]
+Description=Prometheus
+After=network-online.target
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/podman run \
+    --name="prometheus" \
+    --init \
+    --attach stderr --attach stdout \
+    --rm \
+    --volume /etc/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml \
+    --volume /var/lib/prometheus:/prometheus:z \
+    --net=host \
+      docker.io/prom/prometheus:v2.35.0
+Restart=always
+ExecStop=/usr/bin/podman stop -t 5 prometheus
+
+[Install]
+WantedBy=multi-user.target

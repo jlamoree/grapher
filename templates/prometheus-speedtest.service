@@ -1,0 +1,16 @@
+[Unit]
+Description=Prometheus Speedtest Exporter
+After=network-online.target
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/podman run \
+    --name="prometheus-speedtest" \
+    --rm \
+    -p 9516:9516 \
+    docker.io/jraviles/prometheus_speedtest:0.9.9
+Restart=always
+ExecStop=/usr/bin/podman stop -t 5 prometheus-speedtest
+
+[Install]
+WantedBy=multi-user.target

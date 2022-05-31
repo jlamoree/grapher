@@ -1,0 +1,4 @@
+---
+site_node_name: site-node-01
+site_node_reverse_ssh_port: 20022
+site_node_exporter_port: 29090

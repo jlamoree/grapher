@@ -1,0 +1,16 @@
+[Unit]
+Description=Reverse SSH connection
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -i /root/.ssh/site_node -g -N -T \
+  -o "ServerAliveInterval 10" -o "ExitOnForwardFailure yes" \
+  -R {{ site_node_reverse_ssh_port }}:localhost:22 \
+  -R {{ site_node_exporter_port }}:localhost:9090 \
+  site_node@{{ grapher_hostname }}
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

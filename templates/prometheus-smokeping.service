@@ -1,0 +1,20 @@
+[Unit]
+Description=Prometheus Smokeping Exporter
+After=network-online.target
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/podman run \
+    --name="prometheus-smokeping" \
+    --privileged \
+    --attach stderr --attach stdout \
+    --rm \
+    -p 9374:9374 \
+    --volume /etc/prometheus/prometheus-smokeping.yaml:/etc/prometheus/prometheus-smokeping.yaml \
+    quay.io/superq/smokeping-prober:v0.6.0 \
+    --config.file=/etc/prometheus/prometheus-smokeping.yaml
+Restart=always
+ExecStop=/usr/bin/podman stop -t 5 prometheus-smokeping
+
+[Install]
+WantedBy=multi-user.target

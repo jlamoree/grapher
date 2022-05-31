@@ -1,0 +1,8 @@
+---
+#
+# Replace these with your own settings
+#
+site_node_ssh_key: "{{ vault_site_node_ssh_key }}"
+site_node_ssh_key_pub: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMr8VaJ5KpqJ4ZCTvtO1X/ZdO7iN6Qn/ELM/EhrUmJRG site_node
+grapher_hostname: grapher.lamoree.com
+grapher_known_host: grapher.lamoree.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICZHf+5dJd6GZQrG5zhEEeyDa2YfMExU3IW5Vj89pRxo

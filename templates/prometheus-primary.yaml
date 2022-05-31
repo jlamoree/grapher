@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    monitor: "{{ primary_name }}"
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+        - localhost:9090
+  - job_name: federate
+    scrape_interval: 30s
+    honor_labels: true
+    metrics_path: /federate
+    params:
+      'match[]':
+        - '{job=~"(smokeping|speedtest)"}'
+    static_configs:
+      - targets:
+        {% for site_node in site_node_targets %}
+        - {{ site_node }}
+        {% endfor %}

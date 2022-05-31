@@ -1,0 +1,12 @@
+---
+all:
+  hosts:
+    primary:
+      ansible_host: grapher-primary
+    site_node_01:
+      ansible_host: grapher-site-node-01
+      ansible_become: true
+  children:
+    site_nodes:
+      hosts:
+        site_node_01:

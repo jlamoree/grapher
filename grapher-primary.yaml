@@ -1,0 +1,76 @@
+---
+- hosts: primary
+  vars:
+    site_node_gid: 2001
+    site_node_group: site_node
+    site_node_uid: 2001
+    site_node_user: site_node
+  tasks:
+    # Required software
+    - name: Install required software
+      ansible.builtin.package:
+        name: podman,net-tools,tcpdump,iperf3
+        state: latest
+    # Setup reverse SSH support
+    - name: Create the site node group
+      ansible.builtin.group:
+        name: "{{ site_node_group }}"
+        gid: "{{ site_node_gid }}"
+    - name: Create the site node user
+      ansible.builtin.user:
+        name: "{{ site_node_user }}"
+        uid: "{{ site_node_uid }}"
+        group: "{{ site_node_group }}"
+    - name: Set the site node user authorized key
+      ansible.posix.authorized_key:
+        key: "{{ site_node_ssh_key_pub }}"
+        user: "{{ site_node_user }}"
+    # Prometheus Server
+    - name: Create Prometheus configuration path
+      ansible.builtin.file:
+        path: /etc/prometheus
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+    - name: Get the distribution-specific group name
+      ansible.builtin.shell: "getent group 65534 | cut -d: -f1"
+      register: dist_specific_group
+      changed_when: false
+    - name: Create Prometheus data path
+      ansible.builtin.file:
+        path: /var/lib/prometheus
+        state: directory
+        owner: nobody
+        group: "{{ dist_specific_group.stdout }}"
+        mode: "0755"
+    - name: Create Prometheus configuration file
+      ansible.builtin.template:
+        src: prometheus-primary.yaml
+        dest: /etc/prometheus/prometheus.yaml
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Prometheus
+    - name: Copy Prometheus systemd service unit file
+      ansible.builtin.template:
+        src: prometheus.service
+        dest: /etc/systemd/system/prometheus.service
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Prometheus
+    - name: Install Prometheus systemd service
+      ansible.builtin.systemd:
+        name: prometheus
+        enabled: true
+        daemon_reload: true
+        state: started
+  handlers:
+    - name: Restart Prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: restarted
+        daemon_reload: true

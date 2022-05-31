@@ -1,0 +1,110 @@
+---
+- hosts: site_nodes
+  vars:
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name: podman,net-tools,iperf3
+        state: latest
+    # Reverse SSH
+    - name: Configure known_hosts for reverse SSH server
+      ansible.builtin.known_hosts:
+        name: "{{ grapher_hostname }}"
+        key: "{{ grapher_known_host }}"
+    - name: Install site node SSH key
+      ansible.builtin.copy:
+        content: "{{ site_node_ssh_key }}"
+        dest: /root/.ssh/site_node
+        owner: root
+        group: root
+        mode: "0400"
+    - name: Copy reverse SSH systemd service unit file
+      ansible.builtin.template:
+        src: reverse-ssh.service
+        dest: /etc/systemd/system/reverse-ssh.service
+        owner: root
+        group: root
+        mode: "0444"
+    - name: Install reverse SSH systemd service
+      ansible.builtin.systemd:
+        name: reverse-ssh
+        enabled: true
+        daemon_reload: true
+        state: started
+    # Prometheus Server
+    - name: Create Prometheus configuration path
+      ansible.builtin.file:
+        path: /etc/prometheus
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+    - name: Create Prometheus data path
+      ansible.builtin.file:
+        path: /var/lib/prometheus
+        state: directory
+        owner: nobody
+        group: nogroup
+        mode: "0755"
+    - name: Create Prometheus configuration file
+      ansible.builtin.template:
+        src: prometheus-site-node.yaml
+        dest: /etc/prometheus/prometheus.yaml
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Prometheus
+    - name: Copy Prometheus systemd service unit file
+      ansible.builtin.template:
+        src: prometheus.service
+        dest: /etc/systemd/system/prometheus.service
+        owner: root
+        group: root
+        mode: "0444"
+    - name: Install Prometheus systemd service
+      ansible.builtin.systemd:
+        name: prometheus
+        enabled: true
+        daemon_reload: true
+        state: started
+    # Prometheus Smokeping Exporter
+    - name: Copy Prometheus Smokeping configuration
+      ansible.builtin.template:
+        src: prometheus-smokeping.yaml
+        dest: /etc/prometheus/prometheus-smokeping.yaml
+        owner: root
+        group: root
+        mode: "0444"
+    - name: Copy Prometheus Smokeping exporter systemd service unit file
+      ansible.builtin.template:
+        src: prometheus-smokeping.service
+        dest: /etc/systemd/system/prometheus-smokeping.service
+        owner: root
+        group: root
+        mode: "0444"
+    - name: Install Prometheus Smokeping exporter systemd service
+      ansible.builtin.systemd:
+        name: prometheus-smokeping
+        enabled: true
+        daemon_reload: true
+        state: started
+    # Prometheus Speedtest Exporter
+    - name: Copy Prometheus Speedtest exporter systemd service unit file
+      ansible.builtin.template:
+        src: prometheus-speedtest.service
+        dest: /etc/systemd/system/prometheus-speedtest.service
+        owner: root
+        group: root
+        mode: "0444"
+    - name: Install Prometheus Speedtest exporter systemd service
+      ansible.builtin.systemd:
+        name: prometheus-speedtest
+        enabled: true
+        daemon_reload: true
+        state: started
+  handlers:
+    - name: Restart Prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: restarted
