@@ -1,0 +1,22 @@
+[Unit]
+Description=Grafana
+After=network-online.target
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/podman run \
+    --name=grafana \
+    --init \
+    --attach stderr --attach stdout \
+    --rm \
+    --env-file=/etc/grafana/grafana.env  \
+    -e "GF_LOG_MODE=console file" \
+    --volume /etc/grafana/grafana.ini:/etc/grafana/grafana.ini \
+    --volume /var/lib/grafana:/var/lib/grafana:z \
+    --net=host \
+      docker.io/grafana/grafana-oss:8.5.4
+Restart=always
+ExecStop=/usr/bin/podman stop -t 5 grafana
+
+[Install]
+WantedBy=multi-user.target

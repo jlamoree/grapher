@@ -7,6 +7,10 @@ The Grapher project uses Raspberry Pi 4 SBCs installed at sites with flaky inter
 
 A publicly accessible server acts in a primary role and gathers the Prometheus timeseries data via federation from each of the sites for visualization in Grafana.
 
+A single Grafana user is created using credentials in global vars (the password is stored in the Ansible vault).
+
+The Prometheus and Grafana web interfaces are exposed from the VM, so care should be taken to apply the appropriate upstream network/firewall rules.
+
 ## Ansible Playbooks
 
 See the Ansible Inventory for the logical hostnames defined and the mapped `ansible_host` values. For reference, you may wish to use the following SSH `config` template:

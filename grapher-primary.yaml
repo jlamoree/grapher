@@ -5,6 +5,10 @@
     site_node_group: site_node
     site_node_uid: 2001
     site_node_user: site_node
+    grafana_gid: 0
+    grafana_group: root
+    grafana_uid: 472
+    grafana_user: grafana
   tasks:
     # Required software
     - name: Install required software
@@ -68,9 +72,79 @@
         enabled: true
         daemon_reload: true
         state: started
+    # Grafana Server
+    - name: Create the Grafana group
+      ansible.builtin.group:
+        name: "{{ grafana_group }}"
+        gid: "{{ grafana_gid }}"
+      when: grafana_gid > 0
+    - name: Create the Grafana user
+      ansible.builtin.user:
+        name: "{{ grafana_user }}"
+        uid: "{{ grafana_uid }}"
+        group: "{{ grafana_group }}"
+        home: /var/lib/grafana
+        shell: /bin/false
+        system: yes
+    - name: Create Grafana configuration directory
+      ansible.builtin.file:
+        path: /etc/grafana
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+    - name: Create Grafana configuration file
+      ansible.builtin.template:
+        src: grafana.ini
+        dest: /etc/grafana/grafana.ini
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Grafana
+    - name: Create Grafana environment file
+      ansible.builtin.template:
+        src: grafana.env
+        dest: /etc/grafana/grafana.env
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Grafana
+    - name: Copy Grafana systemd service unit file
+      ansible.builtin.template:
+        src: grafana.service
+        dest: /etc/systemd/system/grafana.service
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Grafana
+    - name: Install Grafana systemd service
+      ansible.builtin.systemd:
+        name: grafana
+        enabled: true
+        daemon_reload: true
+        state: started
+    # Firewall config assumes upstream NACLs
+    - name: Open Prometheus port
+      ansible.posix.firewalld:
+        port: 9090/tcp
+        permanent: yes
+        state: enabled
+    - name: Open Grafana port
+      ansible.posix.firewalld:
+        port: 3000/tcp
+        permanent: yes
+        state: enabled
   handlers:
     - name: Restart Prometheus
       ansible.builtin.systemd:
         name: prometheus
+        state: restarted
+        daemon_reload: true
+    - name: Restart Grafana
+      ansible.builtin.systemd:
+        name: grafana
         state: restarted
         daemon_reload: true
