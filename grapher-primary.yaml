@@ -11,9 +11,19 @@
     grafana_user: grafana
   tasks:
     # Required software
+    - name: Add EPEL for RHEL-like systems
+      ansible.builtin.package:
+        name: epel-release
+        state: latest
+      when: ansible_facts['os_family'] == 'RedHat'
+    - name: Add repository for Debian-like systems
+      ansible.builtin.apt_repository:
+        repo: ppa:certbot/certbot
+        state: present
+      when: ansible_facts['os_family'] == 'Debian'
     - name: Install required software
       ansible.builtin.package:
-        name: podman,net-tools,tcpdump,iperf3
+        name: podman,net-tools,tcpdump,iperf3,haproxy
         state: latest
     # Setup reverse SSH support
     - name: Create the site node group
@@ -137,6 +147,112 @@
         port: 3000/tcp
         permanent: yes
         state: enabled
+    # Let's Encrypt and EFF Certbot
+    - name: Prepare Certbot lock directory
+      ansible.builtin.file:
+        path: /var/lib/letsencrypt
+        owner: root
+        group: root
+        mode: "0700"
+        state: directory
+    - name: Prepare Certbot certs directory
+      ansible.builtin.file:
+        path: /etc/letsencrypt
+        owner: root
+        group: root
+        mode: "0755"
+        state: directory
+    - name: Prepare Certbot logs directory
+      ansible.builtin.file:
+        path: /var/log/letsencrypt
+        owner: root
+        group: root
+        mode: "0755"
+        state: directory
+    - name: Certbot script
+      ansible.builtin.template:
+        src: certbot/certbot-create-or-renew.sh
+        dest: /var/lib/letsencrypt/certbot-create-or-renew.sh
+        owner: root
+        group: root
+        mode: "0500"
+    # AWS credentials for Certbot
+    - name: Create AWS path
+      ansible.builtin.file:
+        path: /var/lib/letsencrypt/.aws
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+    - name: Copy AWS configuration
+      ansible.builtin.template:
+        src: aws/config
+        dest: /var/lib/letsencrypt/.aws/config
+        owner: root
+        group: root
+        mode: "0400"
+    - name: Copy AWS credentials
+      ansible.builtin.template:
+        src: aws/credentials
+        dest: /var/lib/letsencrypt/.aws/credentials
+        owner: root
+        group: root
+        mode: "0400"
+    # HAProxy
+    - name: Copy Rsyslog configuration
+      ansible.builtin.template:
+        src: haproxy/99-haproxy.conf
+        dest: /etc/rsyslog.d/99-haproxy.conf
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart Rsyslog
+        - Restart HAProxy
+    - name: Check for SELinux module for HAProxy
+      ansible.builtin.shell:
+        cmd: semodule -l | grep rsyslog-haproxy
+      changed_when: false
+      ignore_errors: true
+      register: module_exists
+    - name: Copy SELinux policy file
+      ansible.builtin.template:
+        src: haproxy/rsyslog-haproxy.te
+        dest: /tmp/rsyslog-haproxy.te
+      when: module_exists.rc > 0
+    - name: Compile, package, and load the module
+      ansible.builtin.shell: |
+        checkmodule -M -m /tmp/rsyslog-haproxy.te -o /tmp/rsyslog-haproxy.mod
+        semodule_package -m /tmp/rsyslog-haproxy.mod -o /tmp/rsyslog-haproxy.pp
+        semodule -i /tmp/rsyslog-haproxy.pp
+      notify:
+        - Restart Rsyslog
+        - Restart HAProxy
+      when: module_exists.rc > 0
+    - name: Check for SELinux port rule for HAProxy
+      ansible.builtin.shell:
+        cmd: semanage boolean -l | grep haproxy
+      changed_when: false
+      ignore_errors: true
+      register: rule_exists
+    - name: Enable HAProxy port rule
+      ansible.builtin.shell:
+        cmd: semanage boolean -m --on haproxy_connect_any
+      when: rule_exists.rc > 0
+    - name: Copy HAProxy configuration
+      ansible.builtin.template:
+        src: haproxy/haproxy.cfg
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: "0444"
+      notify:
+        - Restart HAProxy
+    - name: Configure HAProxy for startup
+      ansible.builtin.systemd:
+        name: haproxy
+        enabled: true
+        daemon_reload: true
   handlers:
     - name: Restart Prometheus
       ansible.builtin.systemd:
@@ -146,5 +262,15 @@
     - name: Restart Grafana
       ansible.builtin.systemd:
         name: grafana
+        state: restarted
+        daemon_reload: true
+    - name: Restart HAProxy
+      ansible.builtin.systemd:
+        name: haproxy
+        state: restarted
+        daemon_reload: true
+    - name: Restart Rsyslog
+      ansible.builtin.systemd:
+        name: rsyslog
         state: restarted
         daemon_reload: true

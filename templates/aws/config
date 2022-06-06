@@ -1,0 +1,3 @@
+[default]
+region = {{ certbot_aws_default_region }}
+output = json

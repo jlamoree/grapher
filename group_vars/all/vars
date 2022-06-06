@@ -9,3 +9,8 @@ grapher_known_host: grapher.lamoree.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICZH
 grafana_admin_username: admin
 grafana_admin_password: "{{ vault_grafana_admin_password }}"
 grafana_secret_key: "{{ vault_grafana_secret_key }}"
+certbot_aws_access_key_id: "{{ vault_certbot_aws_access_key_id }}"
+certbot_aws_secret_access_key: "{{ vault_certbot_aws_secret_access_key }}"
+certbot_aws_default_region: "us-west-2"
+certbot_domain: grapher.lamoree.com
+certbot_email: letsencrypt@lamoree.com
