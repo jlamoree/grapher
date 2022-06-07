@@ -7,6 +7,13 @@ site_node_ssh_key_pub: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMr8VaJ5KpqJ4ZCTvtO1X
 grapher_hostname: grapher.lamoree.com
 grapher_known_host: grapher.lamoree.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICZHf+5dJd6GZQrG5zhEEeyDa2YfMExU3IW5Vj89pRxo
 grafana_admin_username: admin
+grafana_smtp_host: email-smtp.us-west-2.amazonaws.com:587
+grafana_smtp_username: "{{ vault_grafana_smtp_username }}"
+grafana_smtp_password: "{{ vault_grafana_smtp_password }}"
+grafana_smtp_from_address: grapher@lamoree.com
+grafana_smtp_ehlo_identity: "{{ grapher_hostname }}"
+grafana_smtp_starttls_policy: MandatoryStartTLS
+
 grafana_admin_password: "{{ vault_grafana_admin_password }}"
 grafana_secret_key: "{{ vault_grafana_secret_key }}"
 certbot_aws_access_key_id: "{{ vault_certbot_aws_access_key_id }}"
